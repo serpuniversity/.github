@@ -1,1 +1,1 @@
-<img src="https://github.com/serpuniversity/.github/assets/45643901/e8167090-f561-4db4-a156-5269750d8f11" alt="SERP University logo black" style="width: 300px;">
+![SERP University - Banner - SU](https://github.com/serpuniversity/.github/assets/45643901/1738bdef-e29a-47b4-b385-0c96b9763495)
