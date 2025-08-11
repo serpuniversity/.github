@@ -53,10 +53,8 @@ jobs:
           DESCRIPTION=""
           if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
             # File has frontmatter, extract title
-            FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "${{ inputs.file_path }}" | sed '1d;$d')
-            # Extract title, removing only surrounding quotes if present
-            TITLE_LINE=$(echo "$FRONTMATTER" | grep "^title:")
-            DESCRIPTION=$(echo "$TITLE_LINE" | sed 's/^title:[[:space:]]*//')
+            # Use awk which handles special characters better
+            DESCRIPTION=$(awk '/^---$/{f=1;next}/^---$/{f=0}f && /^title:/{sub(/^title:[[:space:]]*/, ""); print; exit}' "${{ inputs.file_path }}")
             # Remove surrounding quotes only if they exist
             DESCRIPTION=$(echo "$DESCRIPTION" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
           fi
