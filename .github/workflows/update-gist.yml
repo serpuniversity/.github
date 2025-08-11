@@ -54,7 +54,7 @@ jobs:
           if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
             # File has frontmatter, extract title
             FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "${{ inputs.file_path }}" | sed '1d;$d')
-            DESCRIPTION=$(echo "$FRONTMATTER" | grep "^title:" | sed 's/^title:[[:space:]]*//' | sed 's/^["'\'']//;s/["'\'']$//')
+            DESCRIPTION=$(echo "$FRONTMATTER" | grep "^title:" | sed 's/^title:[[:space:]]*//' | sed 's/^"//;s/"$//' | sed "s/^'//;s/'$//")
           fi
           
           # Use default description if no title found in frontmatter
