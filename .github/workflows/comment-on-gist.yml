@@ -27,14 +27,10 @@ on:
         description: 'Direct comment text (when content_source is direct)'
         required: false
         type: string
-      comment_prefix:
-        description: 'Optional prefix to add before the comment content'
-        required: false
-        type: string
-        default: ''
-    secrets:
-      GH_PAT_PROFESSOR_SERP:
+      github_token:
+        description: 'GitHub PAT with gist write access'
         required: true
+        type: string
 
 jobs:
   comment-on-gist:
@@ -49,11 +45,8 @@ jobs:
         id: get_content
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_PROFESSOR_SERP }}
+          GITHUB_TOKEN: ${{ inputs.github_token }}
         run: |
-          # Initialize comment content file
-          > /tmp/comment_content.txt
-          
           # Get content based on source type
           case "${{ inputs.content_source }}" in
             "file")
@@ -106,44 +99,9 @@ jobs:
               ;;
           esac
           
-          # Add prefix if provided
-          if [ -n "${{ inputs.comment_prefix }}" ]; then
-            {
-              echo "${{ inputs.comment_prefix }}"
-              echo ""
-              cat /tmp/comment_content.txt
-            } > /tmp/comment_with_prefix.txt
-            mv /tmp/comment_with_prefix.txt /tmp/comment_content.txt
-          fi
-          
-          # Add metadata footer
-          {
-            cat /tmp/comment_content.txt
-            echo ""
-            echo "---"
-            echo "_Posted from: [${{ github.repository }}](https://github.com/${{ github.repository }})_"
-            echo "_Source: ${{ inputs.content_source }}_"
-            case "${{ inputs.content_source }}" in
-              "file")
-                echo "_File: [${{ inputs.file_path }}](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/${{ inputs.file_path }})_"
-                ;;
-              "release")
-                echo "_Release: [${{ inputs.release_tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.release_tag }})_"
-                ;;
-              "issue")
-                echo "_Issue: [#${{ inputs.issue_number }}](https://github.com/${{ github.repository }}/issues/${{ inputs.issue_number }})_"
-                ;;
-            esac
-            echo "_Posted at: $(date -u +%Y-%m-%dT%H:%M:%SZ)_"
-          } > /tmp/final_comment.txt
-          
-          # Store content length for verification
-          CONTENT_LENGTH=$(wc -c < /tmp/final_comment.txt)
-          echo "content_length=$CONTENT_LENGTH" >> $GITHUB_OUTPUT
-          
       - name: Post comment to gist
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_PROFESSOR_SERP }}
+          GITHUB_TOKEN: ${{ inputs.github_token }}
         shell: bash
         run: |
           GIST_ID="${{ inputs.gist_id }}"
@@ -161,7 +119,7 @@ jobs:
           fi
           
           # Create JSON payload for comment
-          jq -Rs '{body: .}' < /tmp/final_comment.txt > /tmp/comment_payload.json
+          jq -Rs '{body: .}' < /tmp/comment_content.txt > /tmp/comment_payload.json
           
           # Post comment to gist
           RESPONSE=$(curl -s -X POST \
@@ -185,4 +143,3 @@ jobs:
           echo "💬 Comment URL: $COMMENT_URL"
           echo "🆔 Comment ID: $COMMENT_ID"
           echo "📝 Gist ID: $GIST_ID"
-          echo "📊 Comment size: ${{ steps.get_content.outputs.content_length }} bytes"
