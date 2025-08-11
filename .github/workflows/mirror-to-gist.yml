@@ -63,11 +63,11 @@ jobs:
       - name: Create or update gist
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_PROFESSOR_SERP }}
+          FILE_CONTENT: ${{ steps.read_file.outputs.file_content }}
         shell: bash
         run: |
           # Prepare the gist payload
           FILENAME="${{ steps.read_file.outputs.filename }}"
-          FILE_CONTENT=${{ steps.read_file.outputs.file_content }}
           
           # Create the gist using GitHub API
           RESPONSE=$(curl -s -X POST \
