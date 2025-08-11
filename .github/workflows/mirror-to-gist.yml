@@ -35,8 +35,8 @@ jobs:
             exit 1
           fi
           
-          # Read the file content and encode it for JSON
-          FILE_CONTENT=$(cat "${{ inputs.file_path }}" | jq -Rs .)
+          # Read the file content (raw, not JSON-encoded yet)
+          FILE_CONTENT=$(cat "${{ inputs.file_path }}")
           echo "file_content<<EOF" >> $GITHUB_OUTPUT
           echo "$FILE_CONTENT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -63,11 +63,15 @@ jobs:
       - name: Create or update gist
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_PROFESSOR_SERP }}
-          FILE_CONTENT: ${{ steps.read_file.outputs.file_content }}
         shell: bash
         run: |
           # Prepare the gist payload
           FILENAME="${{ steps.read_file.outputs.filename }}"
+          DESCRIPTION="${{ steps.read_file.outputs.description }}"
+          
+          # Read the raw file content and create JSON payload
+          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "$DESCRIPTION" --arg fname "$FILENAME" \
+            '{description: $desc, public: true, files: {($fname): {content: .}}}' > payload.json
           
           # Create the gist using GitHub API
           RESPONSE=$(curl -s -X POST \
@@ -75,15 +79,7 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/gists \
-            -d "{
-              \"description\": \"${{ steps.read_file.outputs.description }}\",
-              \"public\": true,
-              \"files\": {
-                \"$FILENAME\": {
-                  \"content\": $FILE_CONTENT
-                }
-              }
-            }")
+            -d @payload.json)
           
           # Extract and display the gist URL
           GIST_URL=$(echo "$RESPONSE" | jq -r '.html_url')
