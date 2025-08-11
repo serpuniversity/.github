@@ -49,22 +49,21 @@ jobs:
           FILENAME=$(basename "${{ inputs.file_path }}")
           echo "filename=$FILENAME" >> $GITHUB_OUTPUT
           
-          # Extract title from frontmatter if it exists
-          DESCRIPTION=""
+          # Extract title from frontmatter if it exists and save to file
           if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
             # File has frontmatter, extract title
-            # Use awk which handles special characters better
-            DESCRIPTION=$(awk '/^---$/{f=1;next}/^---$/{f=0}f && /^title:/{sub(/^title:[[:space:]]*/, ""); print; exit}' "${{ inputs.file_path }}")
+            # Use awk and save directly to file to preserve special characters
+            awk '/^---$/{f=1;next}/^---$/{f=0}f && /^title:/{sub(/^title:[[:space:]]*/, ""); print; exit}' "${{ inputs.file_path }}" > /tmp/description.txt
             # Remove surrounding quotes only if they exist
-            DESCRIPTION=$(echo "$DESCRIPTION" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
+            sed -i 's/^"\(.*\)"$/\1/' /tmp/description.txt
+            sed -i "s/^'\(.*\)'$/\1/" /tmp/description.txt
+          else
+            # Use default description
+            echo "Mirror of ${{ inputs.file_path }} from ${{ github.repository }}" > /tmp/description.txt
           fi
           
-          # Use default description if no title found in frontmatter
-          if [ -z "$DESCRIPTION" ]; then
-            DESCRIPTION="Mirror of ${{ inputs.file_path }} from ${{ github.repository }}"
-          fi
-          
-          # Use heredoc to preserve special characters
+          # Read description from file for output
+          DESCRIPTION=$(cat /tmp/description.txt)
           echo "description<<EOF" >> $GITHUB_OUTPUT
           echo "$DESCRIPTION" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -91,8 +90,8 @@ jobs:
           fi
           
           # Read the raw file content and create JSON payload for update
-          # Get description from environment to avoid GitHub Actions variable expansion issues
-          GIST_DESC="${{ steps.read_file.outputs.description }}"
+          # Read description from file to preserve special characters
+          GIST_DESC=$(cat /tmp/description.txt)
           cat "${{ inputs.file_path }}" | jq -Rs --arg desc "$GIST_DESC" --arg fname "$FILENAME" \
             '{description: $desc, files: {($fname): {content: .}}}' > payload.json
           
