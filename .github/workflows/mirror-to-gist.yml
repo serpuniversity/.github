@@ -18,6 +18,7 @@ jobs:
         
       - name: Validate and read markdown file
         id: read_file
+        shell: bash
         run: |
           # Check if file exists
           if [ ! -f "${{ github.event.inputs.file_path }}" ]; then
@@ -59,6 +60,7 @@ jobs:
       - name: Create or update gist
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT_PROFESSOR_SERP }}
+        shell: bash
         run: |
           # Prepare the gist payload
           FILENAME="${{ steps.read_file.outputs.filename }}"
