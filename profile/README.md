@@ -8,5 +8,6 @@
 - [Learn HTML](https://github.com/serpuniversity/learn-html)
 - [Learn markdown](https://github.com/serpuniversity/learn-markdown)
 - [Learn keyboard shortcuts (hotkeys)](https://github.com/serpuniversity/learn-hotkeys)
+- [Learn SEO](https://github.com/serpuniversity/learn-seo)
 
 </details>
