@@ -72,10 +72,43 @@ jobs:
           # Prepare the gist payload
           FILENAME="${{ steps.read_file.outputs.filename }}"
           
+          # Create modified content with source link in frontmatter
+          # First, check if file has frontmatter
+          if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
+            # File has frontmatter, inject source_url into it
+            awk -v repo="${{ github.repository }}" -v branch="${{ github.ref_name }}" -v file="${{ inputs.file_path }}" '
+              BEGIN {in_fm=0; added=0}
+              /^---$/ && in_fm==0 {in_fm=1; print; next}
+              /^---$/ && in_fm==1 {
+                if (!added) {
+                  print "source_url: https://github.com/" repo "/blob/" branch "/" file
+                  print "source_repo: " repo
+                  print "mirrored_at: " strftime("%Y-%m-%dT%H:%M:%SZ", systime())
+                }
+                in_fm=0; print; next
+              }
+              in_fm==1 && /^source_url:/ {next}  # Skip existing source_url
+              in_fm==1 && /^source_repo:/ {next}  # Skip existing source_repo
+              in_fm==1 && /^mirrored_at:/ {next}  # Skip existing mirrored_at
+              {print}
+            ' "${{ inputs.file_path }}" > /tmp/content_with_metadata.md
+          else
+            # No frontmatter, add one with source link
+            {
+              echo "---"
+              echo "source_url: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/${{ inputs.file_path }}"
+              echo "source_repo: ${{ github.repository }}"
+              echo "mirrored_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "---"
+              echo ""
+              cat "${{ inputs.file_path }}"
+            } > /tmp/content_with_metadata.md
+          fi
+          
           # Read the raw file content and create JSON payload
           # Read description from file to preserve special characters
           GIST_DESC=$(cat /tmp/description.txt)
-          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "$GIST_DESC" --arg fname "$FILENAME" \
+          cat /tmp/content_with_metadata.md | jq -Rs --arg desc "$GIST_DESC" --arg fname "$FILENAME" \
             '{description: $desc, public: true, files: {($fname): {content: .}}}' > payload.json
           
           # Create the gist using GitHub API
