@@ -99,14 +99,10 @@ jobs:
               /^---$/ && in_fm==1 {
                 if (!added) {
                   print "source_url: https://github.com/" repo "/blob/" branch "/" file
-                  print "source_repo: " repo
-                  print "mirrored_at: " strftime("%Y-%m-%dT%H:%M:%SZ", systime())
                 }
                 in_fm=0; print; next
               }
               in_fm==1 && /^source_url:/ {next}  # Skip existing source_url
-              in_fm==1 && /^source_repo:/ {next}  # Skip existing source_repo
-              in_fm==1 && /^mirrored_at:/ {next}  # Skip existing mirrored_at
               {print}
             ' "${{ inputs.file_path }}" > /tmp/content_with_metadata.md
           else
@@ -114,8 +110,6 @@ jobs:
             {
               echo "---"
               echo "source_url: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/${{ inputs.file_path }}"
-              echo "source_repo: ${{ github.repository }}"
-              echo "mirrored_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
               echo "---"
               echo ""
               cat "${{ inputs.file_path }}"
