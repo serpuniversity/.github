@@ -50,7 +50,11 @@ jobs:
           if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
             # File has frontmatter, extract title
             FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "${{ inputs.file_path }}" | sed '1d;$d')
-            DESCRIPTION=$(echo "$FRONTMATTER" | grep "^title:" | sed 's/^title:[[:space:]]*//' | sed 's/^"//;s/"$//' | sed "s/^'//;s/'$//")
+            # Extract title, removing only surrounding quotes if present
+            TITLE_LINE=$(echo "$FRONTMATTER" | grep "^title:")
+            DESCRIPTION=$(echo "$TITLE_LINE" | sed 's/^title:[[:space:]]*//')
+            # Remove surrounding quotes only if they exist
+            DESCRIPTION=$(echo "$DESCRIPTION" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/")
           fi
           
           # Use default description if no title found in frontmatter
@@ -58,7 +62,10 @@ jobs:
             DESCRIPTION="Mirror of ${{ inputs.file_path }} from ${{ github.repository }}"
           fi
           
-          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+          # Use heredoc to preserve special characters
+          echo "description<<EOF" >> $GITHUB_OUTPUT
+          echo "$DESCRIPTION" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
           
       - name: Create or update gist
         env:
@@ -67,10 +74,9 @@ jobs:
         run: |
           # Prepare the gist payload
           FILENAME="${{ steps.read_file.outputs.filename }}"
-          DESCRIPTION="${{ steps.read_file.outputs.description }}"
           
           # Read the raw file content and create JSON payload
-          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "$DESCRIPTION" --arg fname "$FILENAME" \
+          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "${{ steps.read_file.outputs.description }}" --arg fname "$FILENAME" \
             '{description: $desc, public: true, files: {($fname): {content: .}}}' > payload.json
           
           # Create the gist using GitHub API
