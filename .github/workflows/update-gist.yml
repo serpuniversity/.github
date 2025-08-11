@@ -91,9 +91,14 @@ jobs:
           fi
           
           # Read the raw file content and create JSON payload for update
-          # Use the description from the read_file step output
-          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "${{ steps.read_file.outputs.description }}" --arg fname "$FILENAME" \
+          # Get description from environment to avoid GitHub Actions variable expansion issues
+          GIST_DESC="${{ steps.read_file.outputs.description }}"
+          cat "${{ inputs.file_path }}" | jq -Rs --arg desc "$GIST_DESC" --arg fname "$FILENAME" \
             '{description: $desc, files: {($fname): {content: .}}}' > payload.json
+          
+          # Debug: show the payload
+          echo "Payload content:"
+          jq . payload.json
           
           # Update the gist using GitHub API (PATCH method)
           RESPONSE=$(curl -s -X PATCH \
