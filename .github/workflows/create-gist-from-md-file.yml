@@ -1,10 +1,10 @@
-name: Mirror Markdown to Gist
+name: Create gist from markdown file
 
 on:
   workflow_call:
     inputs:
       file_path:
-        description: 'Path to the markdown file (.md) in the repository to mirror to gist'
+        description: 'relative path to the markdown file (.md) in the repository to create'
         required: true
         type: string
     secrets:
@@ -12,7 +12,7 @@ on:
         required: true
 
 jobs:
-  mirror-to-gist:
+  create-gist:
     runs-on: ubuntu-latest
     
     steps:
