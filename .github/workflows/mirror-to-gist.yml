@@ -1,12 +1,15 @@
 name: Mirror Markdown to Gist
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       file_path:
         description: 'Path to the markdown file (.md) in the repository to mirror to gist'
         required: true
         type: string
+    secrets:
+      GH_PAT_PROFESSOR_SERP:
+        required: true
 
 jobs:
   mirror-to-gist:
@@ -21,38 +24,38 @@ jobs:
         shell: bash
         run: |
           # Check if file exists
-          if [ ! -f "${{ github.event.inputs.file_path }}" ]; then
-            echo "Error: File not found at ${{ github.event.inputs.file_path }}"
+          if [ ! -f "${{ inputs.file_path }}" ]; then
+            echo "Error: File not found at ${{ inputs.file_path }}"
             exit 1
           fi
           
           # Check if file is markdown
-          if [[ ! "${{ github.event.inputs.file_path }}" =~ \.md$ ]]; then
+          if [[ ! "${{ inputs.file_path }}" =~ \.md$ ]]; then
             echo "Error: File must be a markdown file (.md)"
             exit 1
           fi
           
           # Read the file content and encode it for JSON
-          FILE_CONTENT=$(cat "${{ github.event.inputs.file_path }}" | jq -Rs .)
+          FILE_CONTENT=$(cat "${{ inputs.file_path }}" | jq -Rs .)
           echo "file_content<<EOF" >> $GITHUB_OUTPUT
           echo "$FILE_CONTENT" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
           # Get the filename
-          FILENAME=$(basename "${{ github.event.inputs.file_path }}")
+          FILENAME=$(basename "${{ inputs.file_path }}")
           echo "filename=$FILENAME" >> $GITHUB_OUTPUT
           
           # Extract title from frontmatter if it exists
           DESCRIPTION=""
-          if head -n 1 "${{ github.event.inputs.file_path }}" | grep -q "^---"; then
+          if head -n 1 "${{ inputs.file_path }}" | grep -q "^---"; then
             # File has frontmatter, extract title
-            FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "${{ github.event.inputs.file_path }}" | sed '1d;$d')
+            FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "${{ inputs.file_path }}" | sed '1d;$d')
             DESCRIPTION=$(echo "$FRONTMATTER" | grep "^title:" | sed 's/^title:[[:space:]]*//' | sed 's/^["'\'']//;s/["'\'']$//')
           fi
           
           # Use default description if no title found in frontmatter
           if [ -z "$DESCRIPTION" ]; then
-            DESCRIPTION="Mirror of ${{ github.event.inputs.file_path }} from ${{ github.repository }}"
+            DESCRIPTION="Mirror of ${{ inputs.file_path }} from ${{ github.repository }}"
           fi
           
           echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
@@ -93,4 +96,4 @@ jobs:
           
           echo "✅ Gist created successfully!"
           echo "📎 Gist URL: $GIST_URL"
-          echo "📁 Mirrored file: ${{ github.event.inputs.file_path }}"
+          echo "📁 Mirrored file: ${{ inputs.file_path }}"
